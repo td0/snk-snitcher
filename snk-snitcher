@@ -1,0 +1,191 @@
+#!/usr/bin/env node
+
+// https://api.myjson.com/bins/1ey3ch
+const fs = require('fs');
+const childProcess = require('child_process');
+const rp = require('request-promise');
+const cheerio = require('cheerio');
+const async = require('async');
+const ArgumentParser = require('argparse').ArgumentParser;
+const Entities = require('html-entities').AllHtmlEntities;
+const pjson = require('./package.json');
+
+var argparser = new ArgumentParser({
+    version: pjson.version,
+    addHelp:true,
+    description: pjson.description
+});
+argparser.addArgument(
+    [ '-c', '--chapter' ],
+    {
+        help: 'chapter to download',
+        defaultValue: 0,
+        action: 'store'
+    }
+);
+argparser.addArgument(
+	'-u',
+	{
+		help: 'Directly upload the file to the service',
+		action: 'storeTrue'
+	}
+);
+args=argparser.parseArgs();
+
+// arguments
+var chapter = parseInt(args.chapter,10); // items fetched per queue
+
+// prequisite variables
+var l = {};
+var ch_list = {};
+var pages_total = 0;
+var chapter_limit = chapter;
+const url = 'http://readsnk.com/chapter/shingeki-no-kyojin-chapter-';
+
+let str = '\n\t\x1b[33m\x1b[1m\x1b[4mGratter Commence\x1b[0m'+
+    '\n\n\x1b[34mDownload \x1b[0m\t: '+
+    ((chapter != 0)? 'Chapter '+chapter : 'All Chapter');
+console.log(str); 
+
+
+var q = async.queue(function(task, callback){
+    var options = {
+        method: 'GET',
+        uri: task.url,
+        transform: function (body) {
+	        return cheerio.load(body);
+	    }
+    };
+    rp(options).then(function($){
+        let pg = 0;
+        l[task.ch] = [];
+        $('.pages__img').each(function(){
+        	let decoded = decodeURIComponent($(this).attr('src'));
+        	let fid = decoded.search('//2.bp')+2;
+        	let lid = (decoded.search('.png') == -1) ? decoded.search('.jpg') : decoded.search('.png') ;
+        	lid = lid - fid + 4;
+        	l[task.ch][pg] = decoded.substr(fid,lid);
+	    	process.stdout.write('Chapter : '+task.ch+' -> '+pages_total+' page(s)\r');
+        	pg++;
+        	pages_total++;
+        });
+        callback();
+    })
+    .catch(function(err){
+        resp=err.statusCode;
+        if(resp==undefined) {
+            console.log(err);
+            q.kill();
+        }
+        else{
+            process.stdout.write('\x1b[31mError : '+task.url+
+                ' \x1b[33mcode : '+resp+'\x1b[0m\n');  
+        }
+        callback(resp);
+    });
+}, 1);
+
+q.drain = function(){
+	let odir = './output/';
+	let fn = 'data.json'; 
+	l = JSON.stringify(l);
+	if(!fs.existsSync(odir)) fs.mkdirSync(odir);
+	fs.writeFile(odir+fn, l, function(err){
+		if(!err){
+			process.stdout.write('\nDone!\nCheck the following file : '+odir+fn);
+        }else{
+	        process.stdout.write('\033[<2>B'+err+'\x1b[0m');
+        }
+    });
+}
+
+
+function chapter_pad (str) {
+  return (str.length<3) ? chapter_pad("0" + str) : str;
+}
+
+function commence(){
+	console.log('\nReading...');
+	for(var ch = chapter; ch<=chapter_limit; ch++){
+		var urli = url+chapter_pad(ch.toString())+'/';
+		q.push({url:urli, ch:ch}, function(resp){
+		    
+		});
+	}
+	re
+}
+
+
+function runScript(callback) {
+    var invoked = false;
+    var process = childProcess.fork('./chapter_list');
+    process.on('error', function (err) {
+        if (invoked) return;
+        invoked = true;
+        callback(err);
+    });
+    process.on('exit', function (code) {
+        if (invoked) return;
+        invoked = true;
+        var err = code === 0 ? null : new Error('exit code ' + code);
+        callback(err);
+    });
+}
+
+try {
+    l = require('./output/data.json');
+    console.log('\n\x1b[46m\x1b[30m Updating existing data... \x1b[0m');
+} catch(err) {
+    console.log('\n\x1b[46m\x1b[30m Creating new entries... \x1b[0m');
+}
+
+if(chapter == 0){
+    chapter = 1;
+    while(l[chapter] != undefined){
+    	chapter++;
+    }
+    console.log('current max chapter\t : '+chapter);
+    runScript(function(x){
+    	if(!x){
+	    	ch_list = require('./output/chapter_list.json');
+			chapter_limit = parseInt(ch_list[ch_list.length-1]);
+			if (chapter_limit<=chapter){
+				console.log('no new chapter available just yet');
+			}else commence();
+		}else{
+			console.error(x);
+		}
+    });
+
+}else{
+	commence();
+}
+
+
+/*
+Reset = "\x1b[0m"
+Bright = "\x1b[1m"
+Dim = "\x1b[2m"
+Underscore = "\x1b[4m"
+Blink = "\x1b[5m"
+Reverse = "\x1b[7m"
+Hidden = "\x1b[8m"
+
+FgBlack = "\x1b[30m"
+FgRed = "\x1b[31m"
+FgGreen = "\x1b[32m"
+FgYellow = "\x1b[33m"
+FgBlue = "\x1b[34m"
+FgMagenta = "\x1b[35m"
+FgCyan = "\x1b[36m"
+FgWhite = "\x1b[37m"
+
+BgBlack = "\x1b[40m"
+BgRed = "\x1b[41m"
+BgGreen = "\x1b[42m"
+BgYellow = "\x1b[43m"
+BgBlue = "\x1b[44m"
+BgMagenta = "\x1b[45m"
+BgCyan = "\x1b[46m"
+BgWhite = "\x1b[47m"
+*/

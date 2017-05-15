@@ -1,0 +1,21 @@
+#!/usr/bin/env node
+
+// https://jsonblob.com/api/jsonblob/893559b9-3919-11e7-ae4c-cfb1f4b50d47
+const rp = require('request-promise');
+var mdata = require('./output/data.json');
+mdata =  JSON.stringify(mdata);
+
+var options = {
+    uri:'https://jsonblob.com/api/jsonblob/893559b9-3919-11e7-ae4c-cfb1f4b50d47',
+    method : "PUT",
+    headers : {
+        'Content-Type': 'application/json',
+        'Accept' : 'application/json',
+        'Transfer-Encoding' : 'chunked'
+    },
+	body : mdata
+};
+
+rp(options)
+.then(function(s){console.log('succeed')})
+.catch(function(x){console.log('failed')});

@@ -1,0 +1,40 @@
+#!/usr/bin/env node
+
+const fs = require('fs');
+const rp = require('request-promise');
+const cheerio = require('cheerio');
+
+const options = {
+    method: 'GET',
+    uri: 'http://readsnk.com/',
+    transform: function (body) {
+        return cheerio.load(body);
+    }
+};
+rp(options).then(function($){
+	let l = [];
+	let i = 0;
+	$('.chapters-list').children().each(function(){
+		let fid = $(this).html().search('Chapter ') + 8;
+		let lid = $(this).html().search(' <span')-fid;
+
+		l[i] = $(this).html().substr(fid,lid);
+		i++;
+	});
+	l = l.reverse();
+	console.log('latest chapter available : ' + parseInt(l[l.length-1]));
+
+	let odir = './output/';
+	let fn = 'chapter_list.json'; 
+	l = JSON.stringify(l);
+	if(!fs.existsSync(odir)) fs.mkdirSync(odir);
+	fs.writeFile(odir+fn, l, function(err){
+		if(err){
+            process.stdout.write('\033[<2>B'+err+'\x1b[0m');
+        }
+        process.exit(parseInt(l[l.length-1]));
+    });
+}).catch(function(err){
+	console.log(err);
+	process.exit(0);
+});
