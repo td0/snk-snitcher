@@ -17,5 +17,5 @@ var options = {
 };
 
 rp(options)
-.then(function(s){console.log('succeed')})
-.catch(function(x){console.log('failed')});
+.then( s => console.log('succeed') )
+.catch( x => console.log('failed') );
