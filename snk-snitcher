@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// https://api.myjson.com/bins/1ey3ch
+// https://jsonblob.com/api/jsonblob/893559b9-3919-11e7-ae4c-cfb1f4b50d47
 const fs = require('fs');
 const childProcess = require('child_process');
 const rp = require('request-promise');
@@ -24,16 +24,24 @@ argparser.addArgument(
     }
 );
 argparser.addArgument(
-	'-u',
-	{
-		help: 'Directly upload the file to the service',
-		action: 'storeTrue'
-	}
+    '-u',
+    {
+        help: 'Directly upload the file to the service',
+        action: 'storeTrue'
+    }
+);
+argparser.addArgument(
+    '-r',
+    {
+        help: 'Rewrite output data',
+        action: 'storeTrue'
+    }
 );
 args=argparser.parseArgs();
 
 // arguments
 var chapter = parseInt(args.chapter,10); // items fetched per queue
+var rewrite = args.r;
 
 // prequisite variables
 var l = {};
@@ -61,8 +69,8 @@ var q = async.queue(function(task, callback){
         l[task.ch] = [];
         $('.pages__img').each(function(){
         	let decoded = decodeURIComponent($(this).attr('src'));
-        	let fid = decoded.search('//2.bp')+2;
-        	let lid = (decoded.search('.png') == -1) ? decoded.search('.jpg') : decoded.search('.png') ;
+        	let fid = decoded.search('//2\\.bp')+2;
+        	let lid = (decoded.search('\\.png') == -1) ? decoded.search('\\.jpg') : decoded.search('\\.png') ;
         	lid = lid - fid + 4;
         	l[task.ch][pg] = decoded.substr(fid,lid);
 	    	process.stdout.write('Chapter : '+task.ch+' -> '+pages_total+' page(s)\r');
@@ -112,7 +120,6 @@ function commence(){
 		    
 		});
 	}
-	re
 }
 
 
@@ -141,10 +148,10 @@ try {
 
 if(chapter == 0){
     chapter = 1;
-    while(l[chapter] != undefined){
-    	chapter++;
+    if(!rewrite){
+        while(l[chapter] != undefined) chapter++;
     }
-    console.log('current max chapter\t : '+chapter);
+    console.log('current max chapter\t : '+(chapter-1));
     runScript(function(x){
     	if(!x){
 	    	ch_list = require('./output/chapter_list.json');
